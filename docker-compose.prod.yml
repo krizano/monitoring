@@ -1,0 +1,7 @@
+version: '3.7'
+
+services:
+  monitor-app:
+    build:
+      target: production
+    command: node app/index.js

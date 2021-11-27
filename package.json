@@ -4,21 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "NODE_PATH=./app node app/index.js",
-    "build": "tsc -p .",
     "dev": "nodemon src/index.ts",
+    "build": "tsc -p .",
+    "start": "node app/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/dotenv": "^8.2.0",
     "@types/restify": "^8.5.4",
     "nodemon": "^2.0.15",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.2"
   },
   "dependencies": {
+    "dotenv": "^10.0.0",
     "restify": "^8.6.0"
   }
 }
