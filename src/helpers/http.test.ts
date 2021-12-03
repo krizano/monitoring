@@ -1,8 +1,7 @@
-import { mimeType, serialize } from "./content";
-import { Mime } from "./http";
+import { Mime, mimeType, serialize } from './http';
 
 describe('Content helpers', () => {
-    describe('mimeType', () => {
+    describe('mimeType()', () => {
         test.each([
             ['test', Mime.Text],
             [123, Mime.Text],
@@ -13,7 +12,7 @@ describe('Content helpers', () => {
         });
     });
 
-    describe('serialize', () => {
+    describe('serialize()', () => {
         test.each([
             ['test', Mime.Text, 'test'],
             [123, Mime.Text, '123'],

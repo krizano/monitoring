@@ -1,7 +1,6 @@
 import { Request, Response, Next } from 'restify';
 import { createLogger } from '../helpers/logger';
-import { Http } from '../helpers/http';
-import { error } from '../helpers/response';
+import { Http, error } from '../helpers/http';
 import { getUserManager } from '../database/user-manager';
 
 const _logger = createLogger({
