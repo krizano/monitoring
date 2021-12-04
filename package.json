@@ -2,11 +2,11 @@
   "name": "monitoring",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app/src/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc -p .",
-    "start": "node app/index.js",
+    "start": "node app/src/index.js",
     "test": "jest",
     "seed": "node -r ts-node/register src/database/seed.ts"
   },
