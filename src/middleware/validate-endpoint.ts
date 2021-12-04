@@ -4,9 +4,10 @@ import { validate } from 'jsonschema';
 import { createLogger } from '../helpers/logger';
 import { Http, error} from '../helpers/http';
 import { dt, uuid } from '../helpers/misc';
-import { getEndpointManager } from '../database/endpoint-manager';
-import { ContextPlugin } from '../controllers/controller';
 import { EndpointDto } from '../dto/endpoint.dto';
+import { getEndpointManager } from '../database/endpoint-manager';
+import { getResultManager } from '../database/result-manager';
+import { ContextPlugin } from '../controllers/controller';
 
 const _logger = createLogger({ prefix: 'validation:endpoint' });
 
@@ -41,7 +42,6 @@ export const validateCreateEndpoint = async (req: Request & ContextPlugin, res: 
             },
             url: {
                 type: 'string',
-                // ip regex: '(?:^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$)|(?:^(?:(?:[a-fA-F\d]{1,4}:){7}(?:[a-fA-F\d]{1,4}|:)|(?:[a-fA-F\d]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|:[a-fA-F\d]{1,4}|:)|(?:[a-fA-F\d]{1,4}:){5}(?::(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,2}|:)|(?:[a-fA-F\d]{1,4}:){4}(?:(?::[a-fA-F\d]{1,4}){0,1}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,3}|:)|(?:[a-fA-F\d]{1,4}:){3}(?:(?::[a-fA-F\d]{1,4}){0,2}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,4}|:)|(?:[a-fA-F\d]{1,4}:){2}(?:(?::[a-fA-F\d]{1,4}){0,3}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,5}|:)|(?:[a-fA-F\d]{1,4}:){1}(?:(?::[a-fA-F\d]{1,4}){0,4}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,6}|:)|(?::(?:(?::[a-fA-F\d]{1,4}){0,5}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,7}|:)))(?:%[0-9a-zA-Z]{1,})?$)', 'gm'
                 pattern: '^https?.*',
             },
             period: {
@@ -98,8 +98,9 @@ export const validateUpdateEndpoint = async (req: Request & ContextPlugin, res: 
     }
 
     const endpoint: Partial<EndpointDto> = {
-        id: req.params.id,
         ...data,
+        id: req.params.id,
+
     };
 
     req.set('endpoint', endpoint);
@@ -108,30 +109,17 @@ export const validateUpdateEndpoint = async (req: Request & ContextPlugin, res: 
 };
 
 export const validateDeleteEndpoint = async (req: Request & ContextPlugin, res: Response, next: Next) => {
-    const endpoint = await getEndpointManager(req.get('user'))
-        .getById(req.params.id);
+    const endpoint = req.get<EndpointDto>('endpoint');
 
-    if (!endpoint) {
+    const result = await getResultManager().getLast(endpoint);
+    if (result) {
         return error(res, {
-            status: Http.NotFound,
+            status: Http.BadReqest,
             payload: {
-                error: `No such endpoint id#${req.params.id}`,
+                error: `Endpoint id#${req.params.id} has associated results`,
             },
         });
     }
-
-    // todo
-    // const results = await getResultsManager()
-    // if (results.length) {
-    //     return error(res, {
-    //         status: Http.BadReqest,
-    //         payload: {
-    //             error: `Endpoint id#${req.params.id} has associated results`,
-    //         },
-    //     });
-    // }
-
-    req.set('endpoint', endpoint);
 
     return next();
 };

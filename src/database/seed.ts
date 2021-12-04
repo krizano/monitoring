@@ -115,6 +115,7 @@ const _logger = createLogger({ prefix: 'seed' });
                 checked DATETIME NOT NULL,
                 code INT,
                 payload TEXT,
+                error TEXT,
                 endpoint VARCHAR(36) NOT NULL,
 
                 CONSTRAINT fk_endpoint FOREIGN KEY (endpoint) REFERENCES endpoints(id)
