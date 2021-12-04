@@ -3,8 +3,10 @@ import { Response } from 'restify';
 export enum Http {
     'Ok' = 200,
     'Created' = 201,
+    'Deleted' = 204,
     'BadReqest' = 400,
-    'Unauthorized' = 403,
+    'Unauthorized' = 401,
+    'Forbidden' = 403,
     'NotFound' = 404,
     'Internal' = 500,
 };
@@ -49,10 +51,12 @@ export const serialize = (payload: unknown, type: Mime): string => {
 
 const sendResponse = (res: Response, status: Http, payload: unknown) => {
     const mime = mimeType(payload);
+    const data = serialize(payload, mime);
 
     res.status(status);
-    res.setHeader('content-type', mime);
-    res.send(serialize(payload, mime));
+    res.header('content-type', mime);
+
+    res[mime === Mime.Json ? 'json' : 'send'](data);
 };
 
 export const ok = (

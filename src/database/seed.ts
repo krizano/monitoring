@@ -22,9 +22,11 @@ const _logger = createLogger({ prefix: 'seed' });
 
     const connector: IDbConnector = createConnection(options);
     try {
-        await connector.connected;
+        await connector.query('SELECT 1');
     } catch (e: any) {
-        return _logger.error('Error:', e.message);
+        _logger.error('Error:', e.message);
+        _logger.info('is database server running?');
+        return;
     }
 
     try {

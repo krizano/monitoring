@@ -17,4 +17,4 @@ export class EndpointDto {
 
 export const createEndpointDto = (props: Props<EndpointDto>): EndpointDto => {
     return DtoFactory.create<EndpointDto>(EndpointDto, props);
-}
+};

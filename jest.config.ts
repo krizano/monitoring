@@ -5,6 +5,10 @@ const config: Config.InitialOptions = {
   transform: {
     '^.+\\.ts?$': 'ts-jest',
   },
+  testMatch: [
+    '**/?(*.)+(spec|test).ts',
+  ],
+  // collectCoverage: true,
 };
 
 export default config;

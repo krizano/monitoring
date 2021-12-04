@@ -3,8 +3,10 @@ import { createLogger } from '../helpers/logger';
 
 export interface IDbConnector {
     readonly connection: mysql.Connection;
-    readonly connected: Promise<boolean>;
     query: (sql: string, props?: any) => Promise<any[]>;
+    insert<T> (table: string, dto: T): Promise<T>;
+    update<T> (table: string, dto: T): Promise<T>;
+    delete<T> (table: string, dto: T): Promise<void>;
     disconnect: () => Promise<void>;
 }
 
@@ -43,41 +45,67 @@ const createDefaultOptions = (): IDbOptions => ({
 
 class DbConnection implements IDbConnector {
     readonly connection: mysql.Connection;
-    readonly connected: Promise<boolean>;
 
     constructor(options: IDbOptions) {
         this.connection = mysql.createConnection(options);
         this.connection.config.queryFormat = createQueryFormatter(
             this.connection.escape.bind(this.connection),
         );
-        this.connected = this.tryConnection();
     }
 
-    private tryConnection(): Promise<boolean> {
+    query<T = any> (sql: string, props?: any): Promise<T[]> {
         return new Promise((resolve, reject) => {
-            _logger.log('connecting...');
-            this.connection.connect((e?: mysql.MysqlError) => {
-                if (e) {
-                    return reject(e);
-                }
-                _logger.log('connected');
-                return resolve(true);
-            });
-        });
-    }
-
-    query(sql: string, props?: any): Promise<any[]> {
-        return new Promise((resolve, reject) => {
-            this.connection.query(sql, props, (e, results, fields) => {
+            this.connection.query(sql, props, (e, results/*, fields*/) => {
                 if (e) return reject(e);
 
-                _logger.log('query', { sql, results, fields });
+                _logger.log('query', { sql, results/*, fields*/ });
                 return resolve(results);
             });
         });
     }
 
-    disconnect(): Promise<void> {
+    insert<T = any> (table: string, dto: T): Promise<T> {
+        return new Promise((resolve, reject) => {
+            this.query(
+                `INSERT INTO ${table} (${this.mapKeys(dto)}) VALUES (${this.mapKeys(dto, ':')})`,
+                this.mapProps(dto),
+            )
+                .then((results) => {
+                    return resolve(dto);
+                })
+                .catch(reject);
+        });
+    }
+
+    update<T = any> (table: string, dto: T): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const { id, owner, ...data } = dto as any;
+            this.query(
+                `UPDATE ${table} SET ${this.mapSet(data)} WHERE id = :id AND owner = :owner`,
+                this.mapProps(dto),
+            )
+            .then((results) => {
+                return resolve(dto);
+            })
+            .catch(reject);
+        });
+    }
+
+    delete<T = any> (table: string, dto: T): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.query(
+                `DELETE FROM ${table} WHERE id = :id AND owner = :owner`,
+                this.mapProps(dto),
+            )
+            .then((results) => {
+                _logger.log('results', results);
+                return resolve();
+            })
+            .catch(reject);
+        });
+    }
+
+    disconnect (): Promise<void> {
         return new Promise((resolve, reject) => {
             if (['connected', 'authenticated'].includes(this.connection.state)) {
                 _logger.log('connection teardown');
@@ -92,9 +120,32 @@ class DbConnection implements IDbConnector {
             return resolve();
         });
     }
+
+    private mapKeys<T> (dto: T, prefix = ''): string {
+        return Object.keys(dto)
+            .map(k => `${prefix}${k}`)
+            .join();
+    }
+
+    private mapProps<T> (dto: T): any {
+        return Object.entries(dto).reduce((out, [key, val]) => ({
+            ...out,
+            [key]: this.sanitize(val),
+        }), {});
+    }
+
+    private mapSet<T>(dto: T): string {
+        return Object.keys(dto)
+            .map(k => `${k}=:${k}`)
+            .join();
+    }
+
+    private sanitize (val: any) {
+        return (val === '') ? null : val;
+    }
 }
 
-const cache: { [dbName: string]: IDbConnector } = {};
+const _cache: { [dbName: string]: IDbConnector } = {};
 
 const isServable = (cached: IDbConnector): boolean => {
     return (
@@ -102,17 +153,16 @@ const isServable = (cached: IDbConnector): boolean => {
     );
 };
 
-export const createConnection = (options: IDbOptions, cached = true): IDbConnector => {
+export const createConnection = (options: IDbOptions, cached = false): IDbConnector => {
     const connection = new DbConnection(options);
     if (cached) {
-        cache[options.database] = connection;
+        _cache[options.database] = connection;
     }
     return connection;
 };
 
-export const getDatabase = (options: IDbOptions = createDefaultOptions()): IDbConnector => {
-    const cached = cache[options.database];
-    return isServable(cached)
-        ? cached
-        : createConnection(options);
+export const getDatabase = (options: IDbOptions = createDefaultOptions(), cached = true): IDbConnector => {
+    return cached && isServable(_cache[options.database])
+        ? _cache[options.database]
+        : createConnection(options, cached);
 };
