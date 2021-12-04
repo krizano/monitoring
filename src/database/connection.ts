@@ -58,7 +58,7 @@ class DbConnection implements IDbConnector {
             this.connection.query(sql, props, (e, results/*, fields*/) => {
                 if (e) return reject(e);
 
-                _logger.log('query', { sql, results/*, fields*/ });
+                // _logger.log('query', { sql/*, results, fields*/ });
                 return resolve(results);
             });
         });
