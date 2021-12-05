@@ -1,10 +1,11 @@
 import { request } from 'undici';
+import { EndpointManager, getEndpointManager } from '../database/endpoint-manager';
+import { getResultManager, ResultManager } from '../database/result-manager';
 import { EndpointDto } from '../dto/endpoint.dto';
-import { EndpointManager } from '../database/endpoint-manager';
-import { ResultManager } from '../database/result-manager';
 import { createResultDto, ResultDto } from '../dto/result.dto';
-import { createLogger } from '../helpers/logger';
+import { UserDto } from 'dto/user.dto';
 import { dt, uuid } from '../helpers/misc';
+import { createLogger } from '../helpers/logger';
 
 const _logger = createLogger({
     prefix: 'monitoring',
@@ -13,7 +14,7 @@ const _logger = createLogger({
 
 type EndpointId = string;
 
-export class EndpointMonitoringService {
+class EndpointMonitoringService {
     readonly schedule;
     constructor(
         private readonly endpoints: EndpointManager,
@@ -39,9 +40,10 @@ export class EndpointMonitoringService {
 
     startCheching (endpoint: EndpointDto): void {
         if (this.schedule.has(endpoint.id)) {
-            return _logger.info('periodic check already scheduled for endpoint', {
-                id: endpoint.id,
+            _logger.log('updating periodic check', {
+                id: endpoint,
             });
+            this.stopChecking(endpoint);
         }
 
         setImmediate(() => this.check(endpoint));
@@ -60,13 +62,15 @@ export class EndpointMonitoringService {
     }
 
     stopChecking (endpoint: Pick<EndpointDto, 'id'>): void {
-        if (this.schedule.has(endpoint.id)) {
+        const { id } = endpoint;
+        if (this.schedule.has(id)) {
             clearInterval(
-                this.schedule.get(endpoint.id) as NodeJS.Timer,
+                this.schedule.get(id) as NodeJS.Timer,
             );
+            this.schedule.delete(id);
 
             _logger.log('stopped periodic check for endpoint', {
-                id: endpoint.id,
+                id,
             });
         }
     }
@@ -128,3 +132,8 @@ export class EndpointMonitoringService {
         );
     }
 }
+
+export default new EndpointMonitoringService(
+    getEndpointManager({ id: '*' } as UserDto),
+    getResultManager(),
+);

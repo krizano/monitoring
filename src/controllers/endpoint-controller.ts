@@ -11,13 +11,13 @@ import {
     validateEndpointExists,
     validateUpdateEndpoint,
 } from '../middleware/validate-endpoint';
+import monitoringService from '../service/endpoint-monitor';
 
 const _logger = createLogger({ prefix: 'ctrl:endpoint' });
 
 // All endpoints owned by user
 const getEndpoints = async (req: Request & ContextPlugin, res: Response) => {
     _logger.info('listing all endpoints');
-    const {  } = req.query;
     const endpoints = await getEndpointManager(req.get<UserDto>('user'))
         .getAll();
 
@@ -37,6 +37,8 @@ const addEndpoint = async (req: Request & ContextPlugin, res: Response) => {
     const endpoint = await getEndpointManager(req.get<UserDto>('user'))
         .create(req.get<EndpointDto>('endpoint'));
 
+    monitoringService.startCheching(endpoint);
+
     return ok(res, {
         status: Http.Created,
         payload: endpoint,
@@ -45,8 +47,19 @@ const addEndpoint = async (req: Request & ContextPlugin, res: Response) => {
 
 const modEndpoint = async (req: Request & ContextPlugin, res: Response) => {
     _logger.info('updating record');
-    const endpoint = await getEndpointManager(req.get<UserDto>('user'))
-        .update(req.get<EndpointDto>('endpoint'));
+    const endpoint = req.get<EndpointDto>('endpoint');
+    const update = req.get<Pick<EndpointDto, 'name' | 'period'>>('endpoint:update');
+
+    await getEndpointManager(req.get<UserDto>('user'))
+        .update({
+            id: endpoint.id,
+            ...update,
+        });
+
+    monitoringService.startCheching({
+        ...endpoint,
+        ...update,
+    });
 
     return ok(res, {
         status: Http.Created,
@@ -56,8 +69,11 @@ const modEndpoint = async (req: Request & ContextPlugin, res: Response) => {
 
 const delEndpoint = async (req: Request & ContextPlugin, res: Response) => {
     _logger.info('removing record');
+    const endpoint = req.get<EndpointDto>('endpoint');
     await getEndpointManager(req.get<UserDto>('user'))
-        .delete(req.get<EndpointDto>('endpoint'));
+        .delete(endpoint);
+
+    monitoringService.stopChecking(endpoint);
 
     ok(res, { status: Http.Deleted });
 };

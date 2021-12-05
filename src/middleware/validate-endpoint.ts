@@ -97,13 +97,7 @@ export const validateUpdateEndpoint = async (req: Request & ContextPlugin, res: 
         }});
     }
 
-    const endpoint: Partial<EndpointDto> = {
-        ...data,
-        id: req.params.id,
-
-    };
-
-    req.set('endpoint', endpoint);
+    req.set('endpoint:update', data);
 
     return next();
 };

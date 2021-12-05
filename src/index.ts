@@ -5,24 +5,15 @@ import restify, { Request, RequestHandlerType, Response } from 'restify';
 import { checkAuthorization } from './middleware/authorization';
 import { ok } from './helpers/http';
 import { createLogger } from './helpers/logger';
-import { UserDto } from './dto/user.dto';
 import { getDatabase } from './database/connection';
-
-import { getEndpointManager } from './database/endpoint-manager';
-import { getResultManager } from './database/result-manager';
 
 import endpointsCtrl from './controllers/endpoint-controller';
 import resultsController from './controllers/results-controller';
 
-import { EndpointMonitoringService } from './service/endpoint-monitor';
+import monitoringService from './service/endpoint-monitor';
 
 const { APP_PORT } = process.env;
 const _logger = createLogger({ prefix: 'server', timestamp: true });
-
-const monitoring = new EndpointMonitoringService(
-    getEndpointManager({ id: '*' } as UserDto),
-    getResultManager(),
-);
 
 const server = restify.createServer();
 
@@ -44,12 +35,12 @@ server.listen(APP_PORT, () => {
         handlers: r.handlers,
     })));
     _logger.log('srarting monitoring service');
-    monitoring.init();
+    monitoringService.init();
 });
 
 process.on('exit', (code) => {
     _logger.log('shutdown: monitoring');
-    monitoring.stop();
+    monitoringService.stop();
 
     _logger.log('shutdown: server');
     server.close();
