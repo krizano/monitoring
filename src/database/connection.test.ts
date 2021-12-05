@@ -11,7 +11,7 @@ const options: IDbOptions = {
     password: process.env.DB_PASSWORD as string,
 };
 
-describe.skip('DbConnection', () => {
+describe('DbConnection', () => {
     let connector: IDbConnector;
     beforeAll(() => {
         connector = createConnection(options);
